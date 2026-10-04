@@ -1,0 +1,35 @@
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-canvas font-sans text-ink antialiased; font-feature-settings: "tnum" 1; }
+  h1, h2, h3 { @apply tracking-tight; }
+  :focus-visible { outline: 2px solid #0B7A66; outline-offset: 2px; border-radius: 4px; }
+  ::selection { background: #BFE3DA; }
+}
+
+@layer components {
+  .card { @apply rounded-xl border border-line bg-surface shadow-card; }
+  .num { font-variant-numeric: tabular-nums; }
+  .th { @apply px-4 py-2.5 text-left text-xs font-medium text-ink-mute; }
+  .td { @apply px-4 py-3 text-sm; }
+  .skeleton { @apply relative overflow-hidden rounded bg-line/70; }
+  .skeleton::after {
+    content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.65), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  .skeleton::after { display: none; }
+}
