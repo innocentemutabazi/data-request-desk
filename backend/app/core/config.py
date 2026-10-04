@@ -23,7 +23,12 @@ class Settings(BaseSettings):
     environment: Literal["local", "test", "production"] = "local"
 
     # --- Database -----------------------------------------------------------------
-    database_url: str = "postgresql+asyncpg://desk:desk@localhost:5432/desk"
+    database_url: str | None = None
+    database_host: str = "localhost"
+    database_user: str = "desk"
+    database_password: str = "desk"
+    database_name: str = "desk"
+    database_port: int = 5432
     db_pool_size: int = 10
     db_max_overflow: int = 20
     # Upper bound on how long a transaction waits for a row lock before failing fast (-> HTTP 503).
@@ -74,6 +79,18 @@ class Settings(BaseSettings):
             if key in data:
                 data[key] = _split_csv(data[key])
         return data
+
+    @model_validator(mode="after")
+    def _build_database_url(self) -> Settings:
+        if self.database_url is None:
+            from urllib.parse import quote
+
+            password = quote(self.database_password, safe="")
+            self.database_url = (
+                f"postgresql+asyncpg://{self.database_user}:{password}"
+                f"@{self.database_host}:{self.database_port}/{self.database_name}"
+            )
+        return self
 
     @model_validator(mode="after")
     def _forbid_insecure_secret_in_production(self) -> Settings:

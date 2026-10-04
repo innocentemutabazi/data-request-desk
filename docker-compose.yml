@@ -11,6 +11,10 @@ x-backend: &backend
   image: dataset-request-desk-backend:local   # one tag shared by migrate/seed/backend: built once
   build: ./backend
   environment: &backend-env
+    DATABASE_HOST: db
+    DATABASE_USER: desk
+    DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    DATABASE_NAME: desk
     JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-secret-change-me-0123456789abcdef}
     CORS_ORIGINS: http://localhost:8080,http://localhost:5173
     ENVIRONMENT: ${ENVIRONMENT:-local}
