@@ -49,6 +49,7 @@ suite("request lifecycle through the real UI + API", () => {
     const count = within(dialog).getByLabelText("Episodes needed");
     await user.clear(count);
     await user.type(count, "3");
+    await user.type(within(dialog).getByLabelText("Delivery deadline"), "2026-10-31");
     await user.click(within(dialog).getByRole("button", { name: /submit request/i }));
 
     expect(await screen.findByRole("heading", { name: title })).toBeInTheDocument(); // navigated to the detail page

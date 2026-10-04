@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query, UploadFile
 
 from app.application.dto import Actor, Availability, EpisodeFilters
 from app.composition import Container
-from app.domain.enums import Quality, UserRole
+from app.domain.enums import Quality
 from app.domain.errors import InvalidImportFile, PayloadTooLarge
 from app.interfaces.api.deps import STAFF, current_actor, get_container, require_roles
 from app.interfaces.api.schemas import (

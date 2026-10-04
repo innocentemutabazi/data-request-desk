@@ -322,15 +322,17 @@ XSS-readable. An `httpOnly` `SameSite` cookie + CSRF token is stronger and is wh
 
 **Verified (by running it):**
 
-- The backend test suite passes against real PostgreSQL (RBAC matrix, 75-case state-machine table,
-  concurrency, import, pagination, analytics, export, migration/model drift). Lint clean (`ruff`).
+- The backend test suite passes against real PostgreSQL (**229 tests**, covering the RBAC matrix,
+  75-case state-machine table, concurrency, import, pagination, analytics, export, and
+  migration/model drift). Lint clean (`ruff`).
 - **Mutation tests** of the locking (§1): the tests fail when the locks are removed.
 - The Alembic migration applies, round-trips down/up, and has **zero drift** from the models.
 - Pinned `requirements.txt` installs in a **fresh venv** and the app imports.
 - Full lifecycle over **real HTTP** (curl), including the real 2–5 s background export.
 - **Frontend:** strict TypeScript clean, production build OK (≈ 90 KB gzipped JS). The **real React app was
   mounted in jsdom and driven against the real backend**, client → operator → export → delivery → acceptance,
-  in both export scenarios (success, and forced failure with Retry). That found one real product bug, now
+  in both export scenarios (success, and forced failure with Retry). The success lifecycle and client
+  isolation checks were re-run after the final test-fixture correction. That found one real product bug, now
   fixed (explicit sign-out left a `from` redirect, so the _next_ user to sign in was dropped onto the previous
   user's page), plus several test-environment issues (jsdom replacing `URLSearchParams`, a racy assertion).
 - **nginx:** the shipped config was run under real nginx: SPA fallback, `/api` prefix stripping, multipart
