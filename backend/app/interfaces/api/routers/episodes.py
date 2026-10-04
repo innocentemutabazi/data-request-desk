@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 from datetime import datetime
+from typing import BinaryIO
 
 from fastapi import APIRouter, Depends, Query, UploadFile
 
@@ -22,6 +23,31 @@ from app.interfaces.api.schemas import (
 router = APIRouter(tags=["episodes"])
 
 
+class _LimitedReader(io.RawIOBase):
+    """Expose a binary stream while enforcing a hard byte limit during reads."""
+
+    def __init__(self, source: BinaryIO, limit: int) -> None:
+        self._source = source
+        self._limit = limit
+        self._read = 0
+
+    def readable(self) -> bool:
+        return True
+
+    def readinto(self, buffer: bytearray) -> int:
+        remaining = self._limit - self._read
+        if remaining <= 0:
+            if self._source.read(1):
+                raise PayloadTooLarge(f"File exceeds the {self._limit // (1024 * 1024)} MiB limit.")
+            return 0
+        chunk = self._source.read(min(len(buffer), remaining))
+        if not chunk:
+            return 0
+        buffer[: len(chunk)] = chunk
+        self._read += len(chunk)
+        return len(chunk)
+
+
 @router.post("/episodes/import", response_model=ImportReportOut)
 async def import_episodes(
     file: UploadFile,
@@ -35,11 +61,13 @@ async def import_episodes(
         raise InvalidImportFile("Upload a .csv file.")
     # utf-8-sig strips a BOM; errors="replace" lets bad bytes surface as per-row rejections
     # instead of aborting a multi-million-row import on row 4,000,000.
-    text = io.TextIOWrapper(file.file, encoding="utf-8-sig", errors="replace", newline="")
+    bounded = io.BufferedReader(_LimitedReader(file.file, c.settings.max_import_bytes))
+    text = io.TextIOWrapper(bounded, encoding="utf-8-sig", errors="replace", newline="")
     try:
         report = await c.imports.import_csv(text, file.filename)
     finally:
-        text.detach()  # don't let the wrapper close the upload's underlying file
+        text.detach()
+        bounded.detach()  # don't let the wrappers close the upload's underlying file
     c.catalog.invalidate()
     return to_import_report_out(report)
 

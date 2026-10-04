@@ -11,7 +11,7 @@ from sqlalchemy import text
 
 from app.application.episode_cleaning import clean_row, parse_header, parse_timestamp
 from app.application.services.import_service import ImportService
-from app.domain.errors import InvalidImportFile
+from app.domain.errors import InvalidImportFile, PayloadTooLarge
 from tests.conftest import SEED_DIR
 
 HEADER = "episode_id,robot_id,task_name,recorded_at,duration_seconds,operator_name,quality\n"
@@ -162,6 +162,23 @@ async def test_import_is_idempotent(container):
         assert again.rejected == first.rejected
     assert await _snapshot(container) == snapshot  # byte-identical table after re-imports
     assert await _count(container) == 172
+
+
+async def test_import_endpoint_enforces_streaming_upload_limit(client, world):
+    await world.add_episodes(1)
+    container = client._transport.app.state.container
+    original = container.settings.max_import_bytes
+    container.settings.max_import_bytes = 32
+    try:
+        response = await client.post(
+            "/episodes/import",
+            files={"file": ("episodes.csv", HEADER + "EP-1,arm-01,pick cup,2026-08-13T06:59:00,30,Eric,good")},
+            headers=world.headers("ops1"),
+        )
+    finally:
+        container.settings.max_import_bytes = original
+    assert response.status_code == 413
+    assert response.json()["error"]["code"] == PayloadTooLarge.code
 
 
 async def _snapshot(container):

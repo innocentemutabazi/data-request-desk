@@ -38,6 +38,9 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
+    env:
+      # Compose requires this value during interpolation. It is test-only, not a secret.
+      POSTGRES_PASSWORD: desk
     defaults:
       run:
         working-directory: frontend

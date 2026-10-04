@@ -54,7 +54,7 @@ export function AppShell() {
   // person to sign in onto the previous user's page.)
   const signOut = () => {
     logout();
-    navigate("/login", { replace: true });
+    navigate("/login", { replace: true, state: null });
   };
   const items = NAV.filter((n) => !n.roles || n.roles.includes(user.role));
 

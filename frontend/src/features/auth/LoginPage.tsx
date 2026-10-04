@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { errorMessage } from "@/shared/lib/api";
 import { Button } from "@/shared/ui/Button";
@@ -16,7 +16,6 @@ const DEMO = [
 export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
-  const from = (useLocation().state as { from?: string } | null)?.from;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,7 +29,7 @@ export function LoginPage() {
     setError(null);
     try {
       const u = await login(creds.email, creds.password);
-      navigate(from && from !== "/login" ? from : homePathFor(u.role), { replace: true });
+      navigate(homePathFor(u.role), { replace: true });
     } catch (err) {
       setError(errorMessage(err));
       setBusy(false);
