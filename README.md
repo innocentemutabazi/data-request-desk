@@ -13,6 +13,8 @@ React 18 · Vite · TypeScript · Tailwind · TanStack Query
 ## Quick start (Docker)
 
 ```bash
+cp .env.example .env
+# Edit .env and set a local POSTGRES_PASSWORD before starting.
 docker compose up --build
 ```
 
@@ -41,7 +43,7 @@ To see the failure toast + retry, run with `EXPORT_FAILURE_RATE=1 docker compose
 
 ```bash
 # 1. database
-createdb desk && createdb desk_test        # user/password desk/desk, or set DATABASE_URL
+createdb desk && createdb desk_test        # configure your local PostgreSQL credentials as needed
 
 # 2. backend
 cd backend
