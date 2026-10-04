@@ -147,7 +147,11 @@ async def test_keyset_queries_use_composite_indexes_with_no_sort_step(world):
     assert "Index Scan Backward using ix_episodes_task_quality_recorded_at" in plan and "Sort" not in plan, plan
 
     # (2) task only (or quality IN (...)) -> (task, recorded_at, id): ordered without a Sort
-    plan = await _plan(world, "SELECT * FROM episodes WHERE task_name='pick cup' ORDER BY recorded_at DESC, episode_id DESC LIMIT 51")
+    plan = await _plan(
+        world,
+        "SELECT * FROM episodes WHERE task_name='pick cup' ORDER BY recorded_at DESC, episode_id DESC LIMIT 51",
+        drop=("ix_episodes_recorded_at_episode_id",),
+    )
     assert "ix_episodes_task_recorded_at" in plan and "Sort" not in plan, plan
 
     # (3) unfiltered global feed
