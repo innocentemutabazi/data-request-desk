@@ -168,6 +168,32 @@ async def test_cannot_deliver_without_enough_assigned_episodes(client, world):
     assert r.status_code == 200 and r.json()["status"] == "delivered"
 
 
+@pytest.mark.parametrize(
+    "window",
+    [
+        {"recorded_after": "2026-09-01T00:00:00"},
+        {"recorded_before": "2026-09-01T00:00:00"},
+        {
+            "recorded_after": "2026-09-01T00:00:00",
+            "recorded_before": "2026-10-01T00:00:00Z",
+        },
+        {
+            "recorded_after": "2026-10-01T00:00:00Z",
+            "recorded_before": "2026-09-01T00:00:00Z",
+        },
+    ],
+)
+async def test_request_recording_window_requires_timezone_and_valid_order(client, world, window):
+    await world.add_episodes(1)
+    response = await client.post(
+        "/requests",
+        json={"title": "Timed request", "task_name": "pick cup", "episodes_requested": 1, **window},
+        headers=world.headers("client_a"),
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_failed"
+
+
 # ---------------------------------------------------------------- assignment rules
 async def test_assignment_only_allowed_while_in_progress(client, world):
     ids = await world.add_episodes(3)
@@ -198,6 +224,55 @@ async def test_episodes_must_match_request_criteria(client, world):
     assert r.status_code == 422
     assert r.json()["error"]["code"] == "episode_criteria_mismatch"
     assert sorted(r.json()["error"]["details"]["episode_ids"]) == sorted([other_task[0], bad_q[0]])
+
+
+@pytest.mark.parametrize("min_quality", [None, "bad"])
+async def test_bad_episodes_are_never_assignable(client, world, min_quality):
+    bad = await world.add_episodes(1, task="pick cup", quality=Quality.BAD, prefix="BAD")
+    req = await create_request(client, world, episodes_requested=1, min_quality=min_quality)
+    await client.post(f"/requests/{req['id']}/start", headers=world.headers("ops1"))
+
+    manual = await client.post(
+        f"/requests/{req['id']}/assignments",
+        json={"episode_ids": bad},
+        headers=world.headers("ops1"),
+    )
+    assert manual.status_code == 422
+    assert manual.json()["error"]["code"] == "episode_criteria_mismatch"
+
+    automatic = await client.post(
+        f"/requests/{req['id']}/assignments/auto",
+        headers=world.headers("ops1"),
+    )
+    assert automatic.status_code == 409
+    assert automatic.json()["error"]["code"] == "no_episodes_available"
+
+
+async def test_candidate_listing_filters_quality_and_never_includes_bad(client, world):
+    good = await world.add_episodes(1, quality=Quality.GOOD, prefix="GOOD")
+    usable = await world.add_episodes(1, quality=Quality.USABLE, prefix="USE")
+    await world.add_episodes(1, quality=Quality.BAD, prefix="BAD")
+    req = await create_request(client, world, episodes_requested=1)
+    headers = world.headers("ops1")
+
+    all_candidates = await client.get(f"/requests/{req['id']}/candidates", headers=headers)
+    assert all_candidates.status_code == 200
+    assert {row["episode_id"] for row in all_candidates.json()["items"]} == {*good, *usable}
+
+    filtered = await client.get(
+        f"/requests/{req['id']}/candidates",
+        params={"quality": "usable"},
+        headers=headers,
+    )
+    assert filtered.status_code == 200
+    assert {row["episode_id"] for row in filtered.json()["items"]} == set(usable)
+
+    bad_filter = await client.get(
+        f"/requests/{req['id']}/candidates",
+        params={"quality": "bad"},
+        headers=headers,
+    )
+    assert bad_filter.status_code == 422
 
 
 async def test_unknown_episode_ids_rejected(client, world):

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import insert
@@ -36,6 +36,31 @@ async def test_analytics_rejects_inverted_date_range(client, world):
         headers=world.headers("ops1"),
     )
 
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_failed"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/analytics/overview",
+        "/analytics/episodes/breakdown",
+        "/analytics/episodes/timeseries",
+    ],
+)
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"recorded_from": "2026-08-01T00:00:00"},
+        {"recorded_to": "2026-08-01T00:00:00"},
+        {
+            "recorded_from": "2026-08-01T00:00:00",
+            "recorded_to": "2026-09-01T00:00:00Z",
+        },
+    ],
+)
+async def test_analytics_rejects_timezone_naive_ranges(client, world, path, params):
+    response = await client.get(path, params=params, headers=world.headers("ops1"))
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "validation_failed"
 
@@ -120,6 +145,20 @@ async def test_overview_counts_assigned_vs_available_and_the_request_funnel(clie
     assert o["total_duration_seconds"] == 450 and o["quality"] == {"good": 4, "usable": 2, "bad": 1}
     assert o["requests"]["by_status"]["accepted"] == 1 and o["requests"]["acceptance_rate"] == 1.0
     assert o["requests"]["turnaround_hours_p50"] is not None
+
+    now = datetime.now(UTC)
+    bounded = (
+        await client.get(
+            "/analytics/overview",
+            params={
+                "recorded_from": (now - timedelta(minutes=1)).isoformat(),
+                "recorded_to": (now + timedelta(minutes=1)).isoformat(),
+            },
+            headers=world.headers("ops1"),
+        )
+    ).json()
+    assert bounded["episodes_total"] == 0
+    assert bounded["requests"]["by_status"]["accepted"] == 1
 
 
 async def test_empty_database_returns_empty_not_errors(client, world):

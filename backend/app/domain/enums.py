@@ -40,8 +40,8 @@ class Quality(StrEnum):
 
 def qualities_at_least(minimum: Quality | None) -> list[Quality]:
     if minimum is None:
-        return list(Quality)
-    return [q for q in Quality if q.rank >= minimum.rank]
+        return [Quality.GOOD, Quality.USABLE]
+    return [q for q in Quality if q is not Quality.BAD and q.rank >= minimum.rank]
 
 
 class ExportStatus(StrEnum):

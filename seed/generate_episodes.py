@@ -5,8 +5,10 @@
 
 Rows are valid and unique; IDs start at EP-100000 so they do not collide with episodes.csv.
 """
-import csv, random, sys
-from datetime import datetime, timedelta
+import csv
+import random
+import sys
+from datetime import UTC, datetime, timedelta
 
 n = int(sys.argv[1]) if len(sys.argv) > 1 else 50_000
 random.seed(1)
@@ -14,7 +16,7 @@ robots = ["arm-01", "arm-02", "arm-03", "mobile-01", "humanoid-01"]
 tasks = ["pick cup", "place cup on shelf", "open drawer", "fold towel", "pour water", "stack blocks", "wipe table"]
 ops = ["Aline", "Eric", "Diane", "Patrick", "Jeanne", "Kevin"]
 quality = ["good"] * 6 + ["usable"] * 3 + ["bad"]
-start = datetime(2025, 9, 1, 8, 0)
+start = datetime(2025, 9, 1, 8, 0, tzinfo=UTC)
 w = csv.writer(sys.stdout)
 w.writerow(["episode_id", "robot_id", "task_name", "recorded_at", "duration_seconds", "operator_name", "quality"])
 for i in range(n):

@@ -112,7 +112,7 @@ another feature's barrel or its leaf `api`/`types`, never its internals; there a
 | `POST /requests/{id}/rework`                                               | operator, admin                 | moves a rejected request back to `in_progress`                |
 | `POST /requests/{id}/accept` · `/reject`                                   | owning client only              |                                                               |
 | `POST /requests/{id}/assignments` · `/assignments/auto`                    | operator, admin                 | pessimistic locks · `SKIP LOCKED`; arms the background export |
-| `GET /requests/{id}/assignments` · `/candidates`                           | staff (clients: after delivery) | keyset-paginated                                              |
+| `GET /requests/{id}/assignments` · `/candidates`                           | staff (clients: after delivery) | keyset-paginated; candidates can be filtered by eligible quality |
 | `POST /requests/{id}/export/retry`                                         | operator, admin                 | only for a failed export                                      |
 | `GET/POST /users` · `PATCH /users/{id}`                                    | admin                           | create, activate/deactivate, and change roles                 |
 | `POST /episodes/import`                                                    | operator, admin                 | multipart CSV; idempotent; returns a full cleaning report     |

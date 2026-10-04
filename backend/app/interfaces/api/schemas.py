@@ -7,7 +7,7 @@ from dataclasses import asdict
 from datetime import date, datetime
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.application.dto import ImportReport, RequestView
 from app.core.config import Settings
@@ -67,6 +67,19 @@ class RequestCreate(BaseModel):
     min_quality: Quality | None = None
     recorded_after: datetime | None = None
     recorded_before: datetime | None = None
+
+    @field_validator("recorded_after", "recorded_before")
+    @classmethod
+    def require_timezone(cls, value: datetime | None) -> datetime | None:
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("must include a timezone")
+        return value
+
+    @model_validator(mode="after")
+    def validate_recording_window(self) -> RequestCreate:
+        if self.recorded_after and self.recorded_before and self.recorded_after >= self.recorded_before:
+            raise ValueError("recorded_after must be earlier than recorded_before")
+        return self
 
 
 class ExportOut(BaseModel):

@@ -41,6 +41,10 @@ jobs:
     env:
       # Compose requires this value during interpolation. It is test-only, not a secret.
       POSTGRES_PASSWORD: desk
+      # Keep the UI lifecycle deterministic and fast; failure/retry behavior has dedicated tests.
+      EXPORT_FAILURE_RATE: "0"
+      EXPORT_MIN_SECONDS: "0.01"
+      EXPORT_MAX_SECONDS: "0.02"
     defaults:
       run:
         working-directory: frontend

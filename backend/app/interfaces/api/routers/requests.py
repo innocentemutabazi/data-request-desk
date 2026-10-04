@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
 from app.application.dto import Actor, NewRequest
 from app.composition import Container
-from app.domain.enums import ExportStatus, RequestStatus, UserRole
+from app.domain.enums import ExportStatus, Quality, RequestStatus, UserRole
 from app.interfaces.api.deps import STAFF, current_actor, get_container, require_roles
 from app.interfaces.api.schemas import (
     AssignIn,
@@ -153,10 +153,11 @@ async def list_candidates(
     request_id: uuid.UUID,
     limit: int = Query(50, ge=1, le=200),
     cursor: str | None = None,
+    quality: Quality | None = None,
     actor: Actor = Depends(_staff),
     c: Container = Depends(get_container),
 ):
-    page = await c.requests.list_candidates(actor, request_id, limit=limit, cursor=cursor)
+    page = await c.requests.list_candidates(actor, request_id, limit=limit, cursor=cursor, quality=quality)
     return PageOut[EpisodeOut](
         items=[to_episode_out(v.episode, v.assigned_request_id) for v in page.items], next_cursor=page.next_cursor
     )

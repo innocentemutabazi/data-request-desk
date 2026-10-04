@@ -15,7 +15,7 @@ from app.domain.models import Assignment, Episode
 from app.infrastructure.db.repositories.predicates import active_assignment_exists, episode_predicates
 
 # Preference order when auto-assigning: hand out the best recordings first.
-_QUALITY_PREFERENCE = (Quality.GOOD, Quality.USABLE, Quality.BAD)
+_QUALITY_PREFERENCE = (Quality.GOOD, Quality.USABLE)
 
 
 class SqlEpisodeRepository:

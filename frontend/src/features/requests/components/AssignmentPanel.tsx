@@ -8,7 +8,7 @@ import { EmptyState, ErrorState } from "@/shared/ui/EmptyState";
 import { LoadMore } from "@/shared/ui/LoadMore";
 import { useToast } from "@/shared/toast/ToastProvider";
 import { useAssign } from "../hooks";
-import type { AssignmentResult, DatasetRequest } from "../types";
+import type { AssignmentResult, DatasetRequest, Quality } from "../types";
 import { EpisodeTape } from "./EpisodeTape";
 
 /** Operator workspace while a request is in progress: fill the quota, by hand or automatically. */
@@ -16,7 +16,8 @@ export function AssignmentPanel({ request }: { request: DatasetRequest }) {
   const toast = useToast();
   const watcher = useExportWatcher();
   const assign = useAssign(request.id);
-  const candidates = useCandidates(request.id, true);
+  const [quality, setQuality] = useState<Quality | "all">("all");
+  const candidates = useCandidates(request.id, true, quality === "all" ? undefined : quality);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
 
   const remaining = request.episodes_requested - request.assigned_count;
@@ -88,9 +89,28 @@ export function AssignmentPanel({ request }: { request: DatasetRequest }) {
         <EpisodeTape assigned={request.assigned_count} requested={request.episodes_requested} />
       </div>
 
-      <div className="border-t border-line bg-sunken/50 px-5 py-2.5 text-xs font-medium text-ink-mute">
-        Available matches · {request.task_name}
-        {request.min_quality && ` · ${request.min_quality}+`}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-sunken/50 px-5 py-2.5">
+        <p className="text-xs font-medium text-ink-mute">
+          Available matches · Task: {request.task_name}
+          {request.min_quality && ` · ${request.min_quality}+`}
+        </p>
+        <label className="flex items-center gap-2 text-xs font-medium text-ink-mute">
+          Quality
+          <select
+            aria-label="Filter candidates by quality"
+            className="rounded-md border border-line-strong bg-surface px-2 py-1.5 text-xs text-ink"
+            value={quality}
+            onChange={(event) => {
+              const value = event.target.value;
+              setQuality(value === "all" ? "all" : (value as Quality));
+              setSelected(new Set());
+            }}
+          >
+            <option value="all">All eligible</option>
+            {request.min_quality !== "good" && <option value="usable">Usable</option>}
+            <option value="good">Good</option>
+          </select>
+        </label>
       </div>
 
       {candidates.isError ? (

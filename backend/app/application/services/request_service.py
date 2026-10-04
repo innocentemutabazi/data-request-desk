@@ -35,7 +35,7 @@ from app.application.dto import (
 from app.application.pagination import clamp_limit
 from app.application.ports import UnitOfWork
 from app.domain.criteria import EpisodeCriteria
-from app.domain.enums import ExportStatus, RequestStatus, UserRole
+from app.domain.enums import ExportStatus, Quality, RequestStatus, UserRole
 from app.domain.errors import (
     AssignmentExceedsRequest,
     EpisodeCriteriaMismatch,
@@ -100,6 +100,9 @@ class RequestService:
             raise ValidationFailed(f"episodes_requested must be between 1 and {MAX_EPISODES_PER_REQUEST}.")
         if data.deadline < datetime.now(UTC).date():
             raise ValidationFailed("deadline must be today or later.")
+        for name, value in (("recorded_after", data.recorded_after), ("recorded_before", data.recorded_before)):
+            if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+                raise ValidationFailed(f"{name} must include a timezone.")
         if data.recorded_after and data.recorded_before and data.recorded_after >= data.recorded_before:
             raise ValidationFailed("recorded_after must be earlier than recorded_before.")
 
@@ -171,7 +174,9 @@ class RequestService:
                 raise PermissionDenied("Episodes become visible once the request has been delivered.")
             return await uow.assignments.list_episodes_page(request_id, clamp_limit(limit), cursor)
 
-    async def list_candidates(self, actor: Actor, request_id, *, limit: int, cursor: str | None) -> Page[EpisodeView]:
+    async def list_candidates(
+        self, actor: Actor, request_id, *, limit: int, cursor: str | None, quality: Quality | None = None
+    ) -> Page[EpisodeView]:
         """Unassigned episodes that satisfy the request's criteria (the operator's picking list)."""
         self._require_staff(actor)
         async with self._uow() as uow:
@@ -179,9 +184,11 @@ class RequestService:
             if view is None:
                 raise NotFound("Request not found.")
             c = EpisodeCriteria.from_request(view.request)
+            if quality is not None and quality not in c.qualities:
+                raise ValidationFailed(f"Quality '{quality}' is not eligible for this request.")
             filters = EpisodeFilters(
                 task_name=c.task_name,
-                qualities=c.qualities,
+                qualities=[quality] if quality is not None else c.qualities,
                 recorded_from=c.recorded_after,
                 recorded_to=c.recorded_before,
                 availability="available",

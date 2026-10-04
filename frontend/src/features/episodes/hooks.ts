@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "./api";
 import type { EpisodeFilters } from "./types";
+import type { Quality } from "@/features/requests/types";
 
 export function useEpisodesInfinite(filters: EpisodeFilters) {
   return useInfiniteQuery({
@@ -11,10 +12,10 @@ export function useEpisodesInfinite(filters: EpisodeFilters) {
   });
 }
 
-export function useCandidates(requestId: string, enabled: boolean) {
+export function useCandidates(requestId: string, enabled: boolean, quality?: Quality) {
   return useInfiniteQuery({
-    queryKey: ["episodes", "candidates", requestId],
-    queryFn: ({ pageParam }) => api.listCandidates(requestId, pageParam),
+    queryKey: ["episodes", "candidates", requestId, quality],
+    queryFn: ({ pageParam }) => api.listCandidates(requestId, quality, pageParam),
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.next_cursor,
     enabled,

@@ -1,11 +1,12 @@
 import { api, type Page } from "@/shared/lib/api";
+import type { Quality } from "@/features/requests/types";
 import type { Episode, EpisodeFilters, ImportReport } from "./types";
 
 export const listEpisodes = (f: EpisodeFilters, cursor?: string | null, limit = 50) =>
   api<Page<Episode>>("/episodes", { query: { ...f, cursor, limit } });
 
-export const listCandidates = (requestId: string, cursor?: string | null, limit = 50) =>
-  api<Page<Episode>>(`/requests/${requestId}/candidates`, { query: { cursor, limit } });
+export const listCandidates = (requestId: string, quality?: Quality, cursor?: string | null, limit = 50) =>
+  api<Page<Episode>>(`/requests/${requestId}/candidates`, { query: { quality, cursor, limit } });
 
 export const listAssigned = (requestId: string, cursor?: string | null, limit = 50) =>
   api<Page<Episode>>(`/requests/${requestId}/assignments`, { query: { cursor, limit } });

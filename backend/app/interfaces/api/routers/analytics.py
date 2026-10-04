@@ -22,6 +22,9 @@ def _filters(
     recorded_from: datetime | None = None,
     recorded_to: datetime | None = None,
 ) -> EpisodeFilters:
+    for name, value in (("recorded_from", recorded_from), ("recorded_to", recorded_to)):
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValidationFailed(f"{name} must include a timezone.")
     if recorded_from is not None and recorded_to is not None and recorded_from >= recorded_to:
         raise ValidationFailed(
             "recorded_from must be earlier than recorded_to.",

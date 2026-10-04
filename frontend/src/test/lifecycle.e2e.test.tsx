@@ -22,7 +22,11 @@ async function backendRequest(email: string, password: string, id: string) {
   const login = await fetch("/api/auth/login", { method: "POST", body: new URLSearchParams({ username: email, password }) });
   const { access_token } = (await login.json()) as { access_token: string };
   const res = await fetch(`/api/requests/${id}`, { headers: { Authorization: `Bearer ${access_token}` } });
-  return (await res.json()) as { status: string; assigned_count: number; export: { status: string; attempts: number } | null };
+  return (await res.json()) as {
+    status: string;
+    assigned_count: number;
+    export: { status: string; attempts: number; updated_at: string | null } | null;
+  };
 }
 
 suite("request lifecycle through the real UI + API", () => {
@@ -73,6 +77,12 @@ suite("request lifecycle through the real UI + API", () => {
     expect(deliver).toBeDisabled(); // the delivery guard is explained, not hidden
     expect(screen.getByText(/more episodes? to deliver/i)).toBeInTheDocument();
 
+    const qualityFilter = screen.getByRole("combobox", { name: "Filter candidates by quality" });
+    await user.selectOptions(qualityFilter, "usable");
+    expect((await screen.findAllByText("usable", { selector: "span.capitalize" })).length).toBeGreaterThan(0);
+    expect(screen.queryByText("bad", { selector: "span.capitalize" })).not.toBeInTheDocument();
+    await user.selectOptions(qualityFilter, "all");
+
     await user.click(await screen.findByRole("button", { name: /auto-assign remaining \(3\)/i }));
     expect(await screen.findByText("Assigned 3 episodes")).toBeInTheDocument();
 
@@ -82,6 +92,13 @@ suite("request lifecycle through the real UI + API", () => {
       expect((await screen.findAllByText(/Export failed · /, undefined, SLOW)).length).toBeGreaterThan(0); // the toast
       expect((await screen.findAllByRole("button", { name: /retry export/i })).length).toBeGreaterThan(0); // toast action + panel button
       await waitFor(async () => expect((await backendRequest("ops1@example.com", "ops123", id)).export?.status).toBe("failed"), SLOW);
+      const firstFailure = await backendRequest("ops1@example.com", "ops123", id);
+      await user.click((await screen.findAllByRole("button", { name: /retry export/i }))[0]!);
+      await waitFor(async () => {
+        const retry = await backendRequest("ops1@example.com", "ops123", id);
+        expect(retry.export?.status).toBe("failed");
+        expect(retry.export?.updated_at).not.toBe(firstFailure.export?.updated_at);
+      }, SLOW);
     } else {
       expect((await screen.findAllByText(/Export ready · /, undefined, SLOW)).length).toBeGreaterThan(0); // the toast
       await waitFor(async () => expect((await backendRequest("ops1@example.com", "ops123", id)).export?.status).toBe("succeeded"), SLOW);
